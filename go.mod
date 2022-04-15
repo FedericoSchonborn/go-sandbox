@@ -1,4 +1,4 @@
-module github.com/FedericoSchonborn/sandbox
+module github.com/FedericoSchonborn/go-sandbox
 
 go 1.18
 
