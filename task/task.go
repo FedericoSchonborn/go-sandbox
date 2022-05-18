@@ -7,8 +7,8 @@ import (
 )
 
 type Handle[T any] struct {
-	done  chan bool
-	value T
+	done  bool
+	value chan T
 }
 
 func Join[T any](handles ...*Handle[T]) []T {
@@ -36,17 +36,21 @@ func Join[T any](handles ...*Handle[T]) []T {
 
 func New[T any](fn func() T) *Handle[T] {
 	handle := &Handle[T]{
-		done: make(chan bool),
+		value: make(chan T, 1),
 	}
 
 	go func() {
-		handle.value = fn()
-		handle.done <- true
+		handle.value <- fn()
 	}()
 	return handle
 }
 
 func (h *Handle[T]) Join() T {
-	<-h.done
-	return h.value
+	if h.done {
+		panic("attempt to join an already completed task")
+	}
+
+	value := <-h.value
+	h.done = true
+	return value
 }
