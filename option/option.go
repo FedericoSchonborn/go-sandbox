@@ -58,9 +58,7 @@ func (o Option[T]) UnwrapOr(def T) T {
 	return def
 }
 
-type UnwrapOrElseFunc[T any] func() T
-
-func (o Option[T]) UnwrapOrElse(fn UnwrapOrElseFunc[T]) T {
+func (o Option[T]) UnwrapOrElse(fn func() T) T {
 	if o.some {
 		return o.inner
 	}
@@ -77,9 +75,7 @@ func (o Option[T]) UnwrapOrZero() (value T, ok bool) {
 	return zero.Zero[T](), false
 }
 
-type MapFunc[T, U any] func(T) U
-
-func Map[T, U any](o Option[T], fn MapFunc[T, U]) Option[U] {
+func Map[T, U any](o Option[T], fn func(T) U) Option[U] {
 	if o.some {
 		return Some(fn(o.inner))
 	}
@@ -95,9 +91,7 @@ func OkOr[T any, E error](o Option[T], err E) result.Result[T] {
 	return result.Err[T](err)
 }
 
-type OkOrElseFunc[E error] func() E
-
-func OkOrElse[T any, E error](o Option[T], err OkOrElseFunc[E]) result.Result[T] {
+func OkOrElse[T any, E error](o Option[T], err func() E) result.Result[T] {
 	if o.some {
 		return result.Ok(o.inner)
 	}
@@ -105,9 +99,7 @@ func OkOrElse[T any, E error](o Option[T], err OkOrElseFunc[E]) result.Result[T]
 	return result.Err[T](err())
 }
 
-type FilterFunc[T any] func(T) bool
-
-func (o Option[T]) Filter(pred FilterFunc[T]) Option[T] {
+func (o Option[T]) Filter(pred func(T) bool) Option[T] {
 	if o.some && pred(o.inner) {
 		return Some(o.inner)
 	}
@@ -123,9 +115,7 @@ func (o Option[T]) Or(ob Option[T]) Option[T] {
 	return ob
 }
 
-type OrElseFunc[T any] func() Option[T]
-
-func (o Option[T]) OrElse(fn OrElseFunc[T]) Option[T] {
+func (o Option[T]) OrElse(fn func() Option[T]) Option[T] {
 	if o.some {
 		return Some(o.inner)
 	}
