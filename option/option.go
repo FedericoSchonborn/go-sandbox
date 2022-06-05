@@ -2,7 +2,6 @@ package option
 
 import (
 	"fmt"
-	"io"
 
 	xfmt "github.com/FedericoSchonborn/go-sandbox/fmt"
 	"github.com/FedericoSchonborn/go-sandbox/result"
@@ -11,21 +10,28 @@ import (
 
 type Option[T any] struct {
 	some  bool
-	inner T
+	value T
 }
 
 func Some[T any](value T) Option[T] {
 	return Option[T]{
 		some:  true,
-		inner: value,
+		value: value,
 	}
 }
 
-// None and Option{} are equivalent.
 func None[T any]() Option[T] {
 	return Option[T]{
 		some: false,
 	}
+}
+
+func (o Option[T]) Match(someFunc func(T), noneFunc func()) {
+	if o.some {
+		someFunc(o.value)
+	}
+
+	noneFunc()
 }
 
 func (o Option[T]) IsSome() bool {
@@ -38,7 +44,7 @@ func (o Option[T]) IsNone() bool {
 
 func (o Option[T]) Unwrap() T {
 	if o.some {
-		return o.inner
+		return o.value
 	}
 
 	panic("Called Option.Unwrap on None value")
@@ -47,12 +53,12 @@ func (o Option[T]) Unwrap() T {
 // UnwrapUnchecked unwraps the Option without checking if it is Some, this may
 // result on unexpected behavior or a panic.
 func (o Option[T]) UnwrapUnchecked() T {
-	return o.inner
+	return o.value
 }
 
 func (o Option[T]) UnwrapOr(def T) T {
 	if o.some {
-		return o.inner
+		return o.value
 	}
 
 	return def
@@ -60,7 +66,7 @@ func (o Option[T]) UnwrapOr(def T) T {
 
 func (o Option[T]) UnwrapOrElse(fn func() T) T {
 	if o.some {
-		return o.inner
+		return o.value
 	}
 
 	return fn()
@@ -69,7 +75,7 @@ func (o Option[T]) UnwrapOrElse(fn func() T) T {
 // UnwrapOrZero is unwrap_or_default but more gopher-ish.
 func (o Option[T]) UnwrapOrZero() (value T, ok bool) {
 	if o.some {
-		return o.inner, true
+		return o.value, true
 	}
 
 	return zero.Zero[T](), false
@@ -77,31 +83,31 @@ func (o Option[T]) UnwrapOrZero() (value T, ok bool) {
 
 func Map[T, U any](o Option[T], fn func(T) U) Option[U] {
 	if o.some {
-		return Some(fn(o.inner))
+		return Some(fn(o.value))
 	}
 
 	return None[U]()
 }
 
-func OkOr[T any, E error](o Option[T], err E) result.Result[T] {
+func OkOr[T any, E error](o Option[T], err E) result.Result[T, E] {
 	if o.some {
-		return result.Ok(o.inner)
+		return result.Ok[T, E](o.value)
 	}
 
 	return result.Err[T](err)
 }
 
-func OkOrElse[T any, E error](o Option[T], err func() E) result.Result[T] {
+func OkOrElse[T any, E error](o Option[T], err func() E) result.Result[T, E] {
 	if o.some {
-		return result.Ok(o.inner)
+		return result.Ok[T, E](o.value)
 	}
 
 	return result.Err[T](err())
 }
 
 func (o Option[T]) Filter(pred func(T) bool) Option[T] {
-	if o.some && pred(o.inner) {
-		return Some(o.inner)
+	if o.some && pred(o.value) {
+		return Some(o.value)
 	}
 
 	return None[T]()
@@ -109,7 +115,7 @@ func (o Option[T]) Filter(pred func(T) bool) Option[T] {
 
 func (o Option[T]) Or(ob Option[T]) Option[T] {
 	if o.some {
-		return Some(o.inner)
+		return Some(o.value)
 	}
 
 	return ob
@@ -117,7 +123,7 @@ func (o Option[T]) Or(ob Option[T]) Option[T] {
 
 func (o Option[T]) OrElse(fn func() Option[T]) Option[T] {
 	if o.some {
-		return Some(o.inner)
+		return Some(o.value)
 	}
 
 	return fn()
@@ -131,8 +137,8 @@ type Zipped[L, R any] struct {
 func Zip[L, R any](l Option[L], r Option[R]) Option[Zipped[L, R]] {
 	if l.some && r.some {
 		return Some(Zipped[L, R]{
-			Left:  l.inner,
-			Right: r.inner,
+			Left:  l.value,
+			Right: r.value,
 		})
 	}
 
@@ -140,10 +146,10 @@ func Zip[L, R any](l Option[L], r Option[R]) Option[Zipped[L, R]] {
 }
 
 func (o Option[T]) Format(f fmt.State, verb rune) {
-	if !o.some {
-		io.WriteString(f, "None")
+	if o.some {
+		fmt.Fprintf(f, "Some("+xfmt.Format(f, verb)+")", o.value)
 		return
 	}
 
-	fmt.Fprintf(f, "Some("+xfmt.Format(f, verb)+")", o.inner)
+	fmt.Fprint(f, "None")
 }
