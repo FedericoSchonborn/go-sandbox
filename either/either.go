@@ -25,6 +25,14 @@ func Right[L, R any](value R) Either[L, R] {
 	}
 }
 
+func (e Either[L, R]) Match(leftFunc func(L), rightFunc func(R)) {
+	if e.left {
+		leftFunc(e.inner.(L))
+	}
+
+	rightFunc(e.inner.(R))
+}
+
 func (e Either[L, R]) IsLeft() bool {
 	return e.left
 }
